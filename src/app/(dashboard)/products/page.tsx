@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/src/lib/api";
 import { getToken } from "@/src/lib/auth";
+import toast from "react-hot-toast";
 
 type Product = {
   id: number;
@@ -28,7 +29,6 @@ type UpdateProductResponse = {
   data: { product: Product };
 };
 
-// ✅ Skeleton component (inline)
 function ProductSkeleton({ rows = 5 }: { rows?: number }) {
   return (
     <div className="divide-y divide-slate-200">
@@ -51,31 +51,22 @@ function ProductSkeleton({ rows = 5 }: { rows?: number }) {
 }
 
 export default function ProductsPage() {
-  // ✅ hydration guard
   const [mounted, setMounted] = useState(false);
-
-  // ✅ token diambil setelah mount (bukan saat render)
   const [token, setToken] = useState<string | null>(null);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
-  // form create
   const [name, setName] = useState("");
   const [price, setPrice] = useState<string>("");
   const [description, setDescription] = useState("");
 
-  // edit state
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
   const [editPrice, setEditPrice] = useState<string>("");
   const [editDescription, setEditDescription] = useState("");
 
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
-  // ✅ Number formatter
   const priceFormatter = useMemo(() => new Intl.NumberFormat("id-ID"), []);
 
   useEffect(() => {
@@ -88,33 +79,31 @@ export default function ProductsPage() {
     return name.trim().length >= 2 && Number.isFinite(p) && p >= 0 && !busy;
   }, [name, price, busy]);
 
-  async function load() {
-    setError("");
-    setLoading(true);
+  async function load(opts?: { silent?: boolean }) {
+    // ✅ silent refresh: jangan bikin skeleton kedip
+    if (!opts?.silent) setLoading(true);
 
     try {
       const res = (await apiFetch<ListProductsResponse>("/products")) as ListProductsResponse;
       setProducts(res.data.products);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Gagal load products");
+      if (!opts?.silent) toast.error(e instanceof Error ? e.message : "Gagal load products");
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }
 
   useEffect(() => {
-    load();
+    load(); // initial load: skeleton muncul
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ✅ REALTIME SSE
   useEffect(() => {
     const BASE = process.env.NEXT_PUBLIC_API_BASE;
     if (!BASE) return;
 
     const es = new EventSource(`${BASE}/products/stream`);
-
-    const onChanged = () => load();
+    const onChanged = () => load({ silent: true });
 
     es.addEventListener("products_changed", onChanged);
 
@@ -130,8 +119,6 @@ export default function ProductsPage() {
     setEditName(p.name);
     setEditPrice(String(p.price));
     setEditDescription(p.description ?? "");
-    setSuccess("");
-    setError("");
   }
 
   function cancelEdit() {
@@ -143,21 +130,17 @@ export default function ProductsPage() {
 
   async function createProduct(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
-    setSuccess("");
 
-    if (!token) {
-      setError("Harus login untuk membuat product");
-      return;
-    }
+    if (!token) return toast.error("Harus login untuk membuat product");
 
     const p = Number(price);
     if (!name.trim() || !Number.isFinite(p) || p < 0) {
-      setError("Nama minimal 2 karakter, harga harus angka >= 0");
-      return;
+      return toast.error("Nama minimal 2 karakter, harga harus angka >= 0");
     }
 
     setBusy(true);
+    const toastId = toast.loading("Membuat product...");
+
     try {
       await apiFetch<CreateProductResponse>("/products", {
         method: "POST",
@@ -172,31 +155,27 @@ export default function ProductsPage() {
       setName("");
       setPrice("");
       setDescription("");
-      setSuccess("Product berhasil dibuat");
-      await load();
+
+      toast.success("Product berhasil dibuat", { id: toastId });
+      await load({ silent: true });
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Gagal membuat product");
+      toast.error(e instanceof Error ? e.message : "Gagal membuat product", { id: toastId });
     } finally {
       setBusy(false);
     }
   }
 
   async function saveEdit(id: number) {
-    setError("");
-    setSuccess("");
-
-    if (!token) {
-      setError("Harus login untuk update product");
-      return;
-    }
+    if (!token) return toast.error("Harus login untuk update product");
 
     const p = Number(editPrice);
     if (!editName.trim() || !Number.isFinite(p) || p < 0) {
-      setError("Nama minimal 2 karakter, harga harus angka >= 0");
-      return;
+      return toast.error("Nama minimal 2 karakter, harga harus angka >= 0");
     }
 
     setBusy(true);
+    const toastId = toast.loading("Menyimpan perubahan...");
+
     try {
       await apiFetch<UpdateProductResponse>(`/products/${id}`, {
         method: "PUT",
@@ -208,46 +187,47 @@ export default function ProductsPage() {
         },
       });
 
-      setSuccess("Product berhasil diupdate");
+      toast.success("Product berhasil diupdate", { id: toastId });
       cancelEdit();
-      await load();
+      await load({ silent: true });
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Gagal update product");
+      toast.error(e instanceof Error ? e.message : "Gagal update product", { id: toastId });
     } finally {
       setBusy(false);
     }
   }
 
   async function deleteProduct(id: number) {
-    setError("");
-    setSuccess("");
-
-    if (!token) {
-      setError("Harus login untuk delete product");
-      return;
-    }
+    if (!token) return toast.error("Harus login untuk delete product");
 
     const ok = confirm("Yakin hapus product ini?");
     if (!ok) return;
 
     setBusy(true);
-    try {
-      await apiFetch(`/products/${id}`, {
-        method: "DELETE",
-        token,
-      });
+    const toastId = toast.loading("Menghapus product...");
 
-      setSuccess("Product berhasil dihapus");
-      await load();
+    try {
+      await apiFetch(`/products/${id}`, { method: "DELETE", token });
+      toast.success("Product berhasil dihapus", { id: toastId });
+      await load({ silent: true });
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Gagal delete product");
+      toast.error(e instanceof Error ? e.message : "Gagal delete product", { id: toastId });
     } finally {
       setBusy(false);
     }
   }
 
+  // ✅ tidak ada Loading... text, pakai skeleton saja
   if (!mounted) {
-    return <div className="text-slate-600">Loading...</div>;
+    return (
+      <div className="mt-6 rounded-2xl border border-slate-200 overflow-hidden">
+        <div className="p-4 border-b border-slate-200">
+          <div className="h-5 w-28 bg-slate-200 rounded animate-pulse" />
+          <div className="h-4 w-40 bg-slate-200 rounded mt-2 animate-pulse" />
+        </div>
+        <ProductSkeleton rows={5} />
+      </div>
+    );
   }
 
   return (
@@ -258,21 +238,6 @@ export default function ProductsPage() {
           <p className="text-slate-600 text-sm mt-1">CRUD sederhana pakai API Express.</p>
         </div>
       </div>
-
-      {(error || success) && (
-        <div className="mt-4 space-y-2">
-          {error && (
-            <div className="rounded-xl border border-red-200 bg-red-50 text-red-700 p-3 text-sm">
-              {error}
-            </div>
-          )}
-          {success && (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 p-3 text-sm">
-              {success}
-            </div>
-          )}
-        </div>
-      )}
 
       <div className="mt-6 rounded-2xl border border-slate-200 p-4">
         <h2 className="font-semibold">Tambah Product</h2>
@@ -333,12 +298,14 @@ export default function ProductsPage() {
         <div className="p-4 border-b border-slate-200 flex items-center justify-between">
           <div>
             <h2 className="font-semibold">Daftar Products</h2>
+            {/* ✅ no "Loading..." text */}
             <p className="text-sm text-slate-600">
-              {loading ? "Loading..." : `${products.length} item`}
+              {loading ? "\u00A0" : `${products.length} item`}
             </p>
           </div>
+
           <button
-            onClick={load}
+            onClick={() => load()} // refresh manual boleh skeleton
             disabled={loading}
             className="rounded-xl border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50 disabled:opacity-60"
           >
@@ -346,7 +313,6 @@ export default function ProductsPage() {
           </button>
         </div>
 
-        {/* ✅ Skeleton list */}
         {loading ? (
           <ProductSkeleton rows={5} />
         ) : (
@@ -407,8 +373,7 @@ export default function ProductsPage() {
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                       <div>
                         <div className="font-semibold">
-                          {p.name}{" "}
-                          <span className="text-slate-500 font-normal">#{p.id}</span>
+                          {p.name} <span className="text-slate-500 font-normal">#{p.id}</span>
                         </div>
                         <div className="text-sm text-slate-600">
                           Rp {priceFormatter.format(p.price)}

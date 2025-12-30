@@ -5,32 +5,46 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { apiFetch } from "@/src/lib/api";
 import { setToken } from "@/src/lib/auth";
+import toast from "react-hot-toast";
+
+type LoginResponse = {
+  message: string;
+  data: {
+    user: { id: number; name: string; email: string };
+    token: string;
+  };
+};
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setErr("");
+
+    if (!email.trim()) return toast.error("Email wajib diisi");
+    if (!password.trim()) return toast.error("Password wajib diisi");
+
     setLoading(true);
+    const toastId = toast.loading("Login...");
 
     try {
-      const res = await apiFetch("/auth/login", {
+      const res = (await apiFetch<LoginResponse>("/auth/login", {
         method: "POST",
-        body: { email, password },
-      });
+        body: { email: email.trim(), password },
+      })) as LoginResponse;
 
       const token = res?.data?.token;
       if (!token) throw new Error("Token tidak ditemukan dari response");
 
       setToken(token);
+      toast.success("Login berhasil", { id: toastId });
+
       router.push("/profile");
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : "Login gagal");
+      toast.error(e instanceof Error ? e.message : "Login gagal", { id: toastId });
     } finally {
       setLoading(false);
     }
@@ -48,21 +62,23 @@ export default function LoginPage() {
           <div>
             <label className="text-sm text-slate-600">Email</label>
             <input
-              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-900/20"
+              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-900/20 disabled:opacity-60"
               placeholder="contoh@mail.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
             />
           </div>
 
           <div>
             <label className="text-sm text-slate-600">Password</label>
             <input
-              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-900/20"
+              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-900/20 disabled:opacity-60"
               type="password"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
             />
           </div>
 
@@ -73,8 +89,6 @@ export default function LoginPage() {
             {loading ? "Loading..." : "Login"}
           </button>
         </form>
-
-        {err && <p className="text-red-600 text-sm mt-3">{err}</p>}
 
         <p className="text-sm text-slate-600 mt-5">
           Belum punya akun?{" "}
