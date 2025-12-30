@@ -6,7 +6,10 @@ type ApiFetchOptions = {
   body?: Record<string, unknown>;
 };
 
-export async function apiFetch(path: string, opts: ApiFetchOptions = {}) {
+export async function apiFetch(
+  path: string,
+  opts: ApiFetchOptions = {}
+): Promise<unknown> {
   const res = await fetch(`${BASE}${path}`, {
     method: opts.method || "GET",
     headers: {
@@ -16,10 +19,16 @@ export async function apiFetch(path: string, opts: ApiFetchOptions = {}) {
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
 
-  const data = await res.json().catch(() => ({}));
+  const data: unknown = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    const msg = data?.message || "Request failed";
+    const msg =
+      typeof data === "object" &&
+      data !== null &&
+      "message" in data
+        ? String((data as { message?: unknown }).message || "Request failed")
+        : "Request failed";
+
     throw new Error(msg);
   }
 

@@ -2,71 +2,107 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/src/lib/api";
-import { clearToken, getToken } from "@/src/lib/auth";
+import { getToken, clearToken } from "@/src/lib/auth";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+
+type User = {
+  id: number;
+  name: string;
+  email: string;
+};
 
 export default function MePage() {
-  type MeUser = {
-    id: number;
-    name: string;
-    email: string;
-    createdAt: string;
-  };
   const router = useRouter();
-  const [me, setMe] = useState<MeUser | null>(null);
-  const [err, setErr] = useState("");
+  const [user, setUser] = useState<User | null>(null);
+  const [edit, setEdit] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [msg, setMsg] = useState("");
 
-  async function loadMe() {
-    setErr("");
+  async function load() {
     const token = getToken();
-    if (!token) {
-      router.push("/login");
-      return;
-    }
+    if (!token) return router.push("/login");
 
     const res = await apiFetch("/auth/me", { token });
-    setMe(res.data.user);
+    setUser(res.data.user);
+    setName(res.data.user.name);
+    setEmail(res.data.user.email);
   }
 
-  useEffect(() => {
-    loadMe().catch((e) => setErr(e.message));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function logoutServer() {
-    // optional: kalau backend kamu punya POST /auth/logout (protected)
+  async function save() {
     const token = getToken();
     if (!token) return;
 
-    try {
-      await apiFetch("/auth/logout", { method: "POST", token });
-    } catch {
-      // kalau gagal, tetap hapus token client
-    }
+    await apiFetch("/auth/profile", {
+      method: "PUT",
+      token,
+      body: { name, email },
+    });
+
+    setMsg("Profile berhasil diupdate");
+    setEdit(false);
+    load();
+  }
+
+  function logout() {
     clearToken();
     router.push("/login");
   }
 
+  useEffect(() => {
+    load();
+  }, []);
+
+  if (!user) return <p>Loading...</p>;
+
   return (
-    <div style={{ maxWidth: 520 }}>
-      <h1>Me</h1>
+    <div className="w-full max-w-lg bg-white p-6 rounded-lg shadow">
+      <h1 className="text-xl font-bold mb-4">Profile</h1>
 
-      <div style={{ display: "flex", gap: 10 }}>
-        <button onClick={logoutServer} style={{ padding: 10 }}>
-          Logout
-        </button>
-        <Link href="/" style={{ alignSelf: "center" }}>
-          Home
-        </Link>
-      </div>
-
-      {err ? <p style={{ marginTop: 12 }}>{err}</p> : null}
-      {me ? (
-        <pre style={{ marginTop: 12 }}>{JSON.stringify(me, null, 2)}</pre>
+      {edit ? (
+        <>
+          <input
+            className="w-full border rounded px-3 py-2 mb-3"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <input
+            className="w-full border rounded px-3 py-2 mb-3"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <button
+            onClick={save}
+            className="bg-blue-600 text-white px-4 py-2 rounded"
+          >
+            Simpan
+          </button>
+        </>
       ) : (
-        <p style={{ marginTop: 12 }}>Loading...</p>
+        <>
+          <p className="mb-2">
+            <b>Nama:</b> {user.name}
+          </p>
+          <p className="mb-4">
+            <b>Email:</b> {user.email}
+          </p>
+          <button
+            onClick={() => setEdit(true)}
+            className="bg-gray-600 text-white px-4 py-2 rounded mr-2"
+          >
+            Edit
+          </button>
+        </>
       )}
+
+      <button
+        onClick={logout}
+        className="bg-red-600 text-white px-4 py-2 rounded mt-4"
+      >
+        Logout
+      </button>
+
+      {msg && <p className="text-green-600 mt-3">{msg}</p>}
     </div>
   );
 }

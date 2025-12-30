@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+/* optional: reset kecil */
+html,
+body {
+  padding: 0;
+  margin: 0;
+}
