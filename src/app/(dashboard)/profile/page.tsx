@@ -43,6 +43,7 @@ function ProfileSkeleton({ rows = 2 }: { rows?: number }) {
   );
 }
 
+
 export default function ProfilePage() {
   const [mounted, setMounted] = useState(false);
   const [token, setToken] = useState<string | null>(null);
