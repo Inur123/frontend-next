@@ -23,7 +23,6 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // ✅ show/hide password
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -37,7 +36,6 @@ export default function RegisterPage() {
       return toast.error("Password dan konfirmasi password tidak sama");
 
     setLoading(true);
-    const toastId = toast.loading("Membuat akun...");
 
     try {
       const res = (await apiFetch<RegisterResponse>("/auth/register", {
@@ -49,14 +47,14 @@ export default function RegisterPage() {
 
       if (token) {
         setToken(token);
-        toast.success("Register berhasil", { id: toastId });
+        toast.success("Register berhasil");
         router.push("/profile");
       } else {
-        toast.success("Register berhasil. Silakan login.", { id: toastId });
+        toast.success("Register berhasil. Silakan login.");
         router.push("/login");
       }
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Register gagal", { id: toastId });
+      toast.error(e instanceof Error ? e.message : "Register gagal");
     } finally {
       setLoading(false);
     }
@@ -93,7 +91,7 @@ export default function RegisterPage() {
             />
           </div>
 
-          {/* ✅ Password */}
+          {/* Password */}
           <div>
             <label className="text-sm text-slate-600">Password</label>
             <div className="relative mt-1">
@@ -111,7 +109,6 @@ export default function RegisterPage() {
                 onClick={() => setShowPassword((v) => !v)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900"
                 disabled={loading}
-                aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? (
                   <svg
@@ -150,7 +147,7 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          {/* ✅ Confirm Password */}
+          {/* Confirm Password */}
           <div>
             <label className="text-sm text-slate-600">Confirm Password</label>
             <div className="relative mt-1">
@@ -168,7 +165,6 @@ export default function RegisterPage() {
                 onClick={() => setShowConfirmPassword((v) => !v)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900"
                 disabled={loading}
-                aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
               >
                 {showConfirmPassword ? (
                   <svg
@@ -207,7 +203,7 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          {/* ✅ BUTTON DENGAN SPINNER */}
+          {/* ✅ Spinner hanya di button */}
           <button
             disabled={loading}
             className="w-full rounded-xl bg-slate-900 text-white py-2.5 hover:bg-slate-800 disabled:opacity-60 flex items-center justify-center gap-2"
@@ -234,6 +230,7 @@ export default function RegisterPage() {
                 />
               </svg>
             )}
+
             <span>{loading ? "Register..." : "Register"}</span>
           </button>
         </form>

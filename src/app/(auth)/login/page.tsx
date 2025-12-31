@@ -21,7 +21,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // ✅ show/hide password
   const [showPassword, setShowPassword] = useState(false);
 
   async function submit(e: React.FormEvent) {
@@ -31,7 +30,6 @@ export default function LoginPage() {
     if (!password.trim()) return toast.error("Password wajib diisi");
 
     setLoading(true);
-    const toastId = toast.loading("Login...");
 
     try {
       const res = (await apiFetch<LoginResponse>("/auth/login", {
@@ -43,10 +41,10 @@ export default function LoginPage() {
       if (!token) throw new Error("Token tidak ditemukan dari response");
 
       setToken(token);
-      toast.success("Login berhasil", { id: toastId });
+      toast.success("Login berhasil");
       router.push("/profile");
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Login gagal", { id: toastId });
+      toast.error(e instanceof Error ? e.message : "Login gagal");
     } finally {
       setLoading(false);
     }
@@ -74,7 +72,6 @@ export default function LoginPage() {
 
           <div>
             <label className="text-sm text-slate-600">Password</label>
-
             <div className="relative mt-1">
               <input
                 className="w-full rounded-xl border border-slate-300 px-3 py-2.5 pr-12 focus:outline-none focus:ring-2 focus:ring-slate-900/20 disabled:opacity-60"
@@ -93,7 +90,6 @@ export default function LoginPage() {
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? (
-                  // eye-off icon
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="20"
@@ -111,7 +107,6 @@ export default function LoginPage() {
                     <path d="M14.12 14.12a3 3 0 0 1-4.24-4.24" />
                   </svg>
                 ) : (
-                  // eye icon
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="20"
@@ -131,7 +126,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* ✅ BUTTON DENGAN SPINNER */}
+          {/* ✅ Spinner hanya di button */}
           <button
             disabled={loading}
             className="w-full rounded-xl bg-slate-900 text-white py-2.5 hover:bg-slate-800 disabled:opacity-60 flex items-center justify-center gap-2"
