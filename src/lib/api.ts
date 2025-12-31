@@ -1,15 +1,15 @@
+// src/lib/api.ts
 const BASE = process.env.NEXT_PUBLIC_API_BASE;
 
 type ApiFetchOptions = {
   method?: string;
   token?: string | null;
-  body?: Record<string, unknown>;
+  body?: any;
 };
 
-export async function apiFetch<T = unknown>(
-  path: string,
-  opts: ApiFetchOptions = {}
-): Promise<T> {
+export async function apiFetch<T = any>(path: string, opts: ApiFetchOptions = {}) {
+  if (!BASE) throw new Error("NEXT_PUBLIC_API_BASE belum di-set di .env.local");
+
   const res = await fetch(`${BASE}${path}`, {
     method: opts.method || "GET",
     headers: {
@@ -19,16 +19,10 @@ export async function apiFetch<T = unknown>(
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
 
-  const data: unknown = await res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    const msg =
-      typeof data === "object" &&
-      data !== null &&
-      "message" in data
-        ? String((data as { message?: unknown }).message || "Request failed")
-        : "Request failed";
-
+    const msg = data?.message || "Request failed";
     throw new Error(msg);
   }
 

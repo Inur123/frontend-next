@@ -1,12 +1,17 @@
-export function getToken() {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("token");
-}
+// src/lib/auth.ts
+const KEY = "token";
 
 export function setToken(token: string) {
-  localStorage.setItem("token", token);
+  if (typeof window === "undefined") return;
+  localStorage.setItem(KEY, token);
+}
+
+export function getToken() {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(KEY);
 }
 
 export function clearToken() {
-  localStorage.removeItem("token");
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(KEY);
 }
