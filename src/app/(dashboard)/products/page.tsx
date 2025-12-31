@@ -29,6 +29,22 @@ type UpdateProductResponse = {
   data: { product: Product };
 };
 
+// ===== Helpers: raw digits <-> formatted =====
+function onlyDigits(s: string) {
+  return s.replace(/\D/g, "");
+}
+
+function formatRibuanFromDigits(digits: string) {
+  if (!digits) return "";
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+function digitsToNumber(digits: string) {
+  if (!digits) return NaN;
+  return Number(digits);
+}
+
+// ✅ Skeleton component (inline)
 function ProductSkeleton({ rows = 5 }: { rows?: number }) {
   return (
     <div className="divide-y divide-slate-200">
@@ -58,13 +74,15 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
+  // form create (✅ simpan RAW DIGITS, bukan "20.000")
   const [name, setName] = useState("");
-  const [price, setPrice] = useState<string>("");
+  const [priceDigits, setPriceDigits] = useState<string>(""); // "20000"
   const [description, setDescription] = useState("");
 
+  // edit state (✅ simpan RAW DIGITS)
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
-  const [editPrice, setEditPrice] = useState<string>("");
+  const [editPriceDigits, setEditPriceDigits] = useState<string>(""); // "20000"
   const [editDescription, setEditDescription] = useState("");
 
   const priceFormatter = useMemo(() => new Intl.NumberFormat("id-ID"), []);
@@ -75,14 +93,12 @@ export default function ProductsPage() {
   }, []);
 
   const canCreate = useMemo(() => {
-    const p = Number(price);
+    const p = digitsToNumber(priceDigits);
     return name.trim().length >= 2 && Number.isFinite(p) && p >= 0 && !busy;
-  }, [name, price, busy]);
+  }, [name, priceDigits, busy]);
 
   async function load(opts?: { silent?: boolean }) {
-    // ✅ silent refresh: jangan bikin skeleton kedip
     if (!opts?.silent) setLoading(true);
-
     try {
       const res = (await apiFetch<ListProductsResponse>("/products")) as ListProductsResponse;
       setProducts(res.data.products);
@@ -94,10 +110,11 @@ export default function ProductsPage() {
   }
 
   useEffect(() => {
-    load(); // initial load: skeleton muncul
+    load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ✅ REALTIME SSE
   useEffect(() => {
     const BASE = process.env.NEXT_PUBLIC_API_BASE;
     if (!BASE) return;
@@ -117,14 +134,14 @@ export default function ProductsPage() {
   function startEdit(p: Product) {
     setEditingId(p.id);
     setEditName(p.name);
-    setEditPrice(String(p.price));
+    setEditPriceDigits(String(p.price)); // ✅ raw digits (misal 20000)
     setEditDescription(p.description ?? "");
   }
 
   function cancelEdit() {
     setEditingId(null);
     setEditName("");
-    setEditPrice("");
+    setEditPriceDigits("");
     setEditDescription("");
   }
 
@@ -133,7 +150,7 @@ export default function ProductsPage() {
 
     if (!token) return toast.error("Harus login untuk membuat product");
 
-    const p = Number(price);
+    const p = digitsToNumber(priceDigits);
     if (!name.trim() || !Number.isFinite(p) || p < 0) {
       return toast.error("Nama minimal 2 karakter, harga harus angka >= 0");
     }
@@ -147,13 +164,13 @@ export default function ProductsPage() {
         token,
         body: {
           name: name.trim(),
-          price: p,
+          price: p, // ✅ angka murni, bukan string "20.000"
           description: description.trim() ? description.trim() : undefined,
         },
       });
 
       setName("");
-      setPrice("");
+      setPriceDigits("");
       setDescription("");
 
       toast.success("Product berhasil dibuat", { id: toastId });
@@ -166,36 +183,38 @@ export default function ProductsPage() {
   }
 
   async function saveEdit(id: number) {
-    if (!token) return toast.error("Harus login untuk update product");
+  if (!token) return toast.error("Harus login untuk update product");
 
-    const p = Number(editPrice);
-    if (!editName.trim() || !Number.isFinite(p) || p < 0) {
-      return toast.error("Nama minimal 2 karakter, harga harus angka >= 0");
-    }
-
-    setBusy(true);
-    const toastId = toast.loading("Menyimpan perubahan...");
-
-    try {
-      await apiFetch<UpdateProductResponse>(`/products/${id}`, {
-        method: "PUT",
-        token,
-        body: {
-          name: editName.trim(),
-          price: p,
-          description: editDescription.trim() ? editDescription.trim() : null,
-        },
-      });
-
-      toast.success("Product berhasil diupdate", { id: toastId });
-      cancelEdit();
-      await load({ silent: true });
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Gagal update product", { id: toastId });
-    } finally {
-      setBusy(false);
-    }
+  const p = digitsToNumber(editPriceDigits);
+  if (!editName.trim() || !Number.isFinite(p) || p < 0) {
+    return toast.error("Nama minimal 2 karakter, harga harus angka >= 0");
   }
+
+  setBusy(true);
+  const toastId = toast.loading("Menyimpan perubahan...");
+
+  try {
+    await apiFetch<UpdateProductResponse>(`/products/${id}`, {
+      method: "PUT",
+      token,
+      body: {
+        name: editName.trim(),
+        price: p,
+        // ✅ penting: kalau kosong kirim undefined, bukan null
+        description: editDescription.trim() ? editDescription.trim() : undefined,
+      },
+    });
+
+    toast.success("Product berhasil diupdate", { id: toastId });
+    cancelEdit();
+    await load({ silent: true });
+  } catch (e: unknown) {
+    toast.error(e instanceof Error ? e.message : "Gagal update product", { id: toastId });
+  } finally {
+    setBusy(false);
+  }
+}
+
 
   async function deleteProduct(id: number) {
     if (!token) return toast.error("Harus login untuk delete product");
@@ -217,7 +236,7 @@ export default function ProductsPage() {
     }
   }
 
-  // ✅ tidak ada Loading... text, pakai skeleton saja
+  // ✅ tidak ada text "Loading..." sebelum mounted → skeleton saja
   if (!mounted) {
     return (
       <div className="mt-6 rounded-2xl border border-slate-200 overflow-hidden">
@@ -259,9 +278,9 @@ export default function ProductsPage() {
             <input
               disabled={busy}
               className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-900/20 disabled:opacity-60"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              placeholder="20000"
+              value={formatRibuanFromDigits(priceDigits)} // ✅ tampil 20.000
+              onChange={(e) => setPriceDigits(onlyDigits(e.target.value))} // ✅ simpan raw "20000"
+              placeholder="20.000"
               inputMode="numeric"
             />
           </div>
@@ -298,14 +317,11 @@ export default function ProductsPage() {
         <div className="p-4 border-b border-slate-200 flex items-center justify-between">
           <div>
             <h2 className="font-semibold">Daftar Products</h2>
-            {/* ✅ no "Loading..." text */}
-            <p className="text-sm text-slate-600">
-              {loading ? "\u00A0" : `${products.length} item`}
-            </p>
+            <p className="text-sm text-slate-600">{loading ? "\u00A0" : `${products.length} item`}</p>
           </div>
 
           <button
-            onClick={() => load()} // refresh manual boleh skeleton
+            onClick={() => load()}
             disabled={loading}
             className="rounded-xl border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50 disabled:opacity-60"
           >
@@ -337,8 +353,8 @@ export default function ProductsPage() {
                         <label className="text-xs text-slate-500">Price</label>
                         <input
                           className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5"
-                          value={editPrice}
-                          onChange={(e) => setEditPrice(e.target.value)}
+                          value={formatRibuanFromDigits(editPriceDigits)} // ✅ tampil 20.000
+                          onChange={(e) => setEditPriceDigits(onlyDigits(e.target.value))} // ✅ simpan raw
                           inputMode="numeric"
                         />
                       </div>
@@ -403,9 +419,7 @@ export default function ProductsPage() {
               );
             })}
 
-            {products.length === 0 && (
-              <div className="p-4 text-slate-600">Belum ada product.</div>
-            )}
+            {products.length === 0 && <div className="p-4 text-slate-600">Belum ada product.</div>}
           </div>
         )}
       </div>

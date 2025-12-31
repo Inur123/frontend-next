@@ -11,6 +11,12 @@ type User = {
   email: string;
 };
 
+type MeResponse = {
+  data: {
+    user: User;
+  };
+};
+
 export default function MePage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -23,7 +29,8 @@ export default function MePage() {
     const token = getToken();
     if (!token) return router.push("/login");
 
-    const res = await apiFetch("/auth/me", { token });
+    const res = await apiFetch<MeResponse>("/auth/me", { token });
+
     setUser(res.data.user);
     setName(res.data.user.name);
     setEmail(res.data.user.email);

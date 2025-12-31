@@ -6,10 +6,10 @@ type ApiFetchOptions = {
   body?: Record<string, unknown>;
 };
 
-export async function apiFetch(
+export async function apiFetch<T = unknown>(
   path: string,
   opts: ApiFetchOptions = {}
-): Promise<unknown> {
+): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: opts.method || "GET",
     headers: {
@@ -32,5 +32,5 @@ export async function apiFetch(
     throw new Error(msg);
   }
 
-  return data;
+  return data as T;
 }
