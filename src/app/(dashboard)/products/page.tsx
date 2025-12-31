@@ -82,6 +82,10 @@ export default function ProductsPage() {
   const [editPrice, setEditPrice] = useState<string>("");
   const [editDescription, setEditDescription] = useState("");
 
+  // ✅ Pagination state
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const priceFormatter = useMemo(() => new Intl.NumberFormat("id-ID"), []);
 
   useEffect(() => {
@@ -93,6 +97,22 @@ export default function ProductsPage() {
     const p = parseRupiahInput(price);
     return name.trim().length >= 2 && Number.isFinite(p) && p >= 0 && !busy;
   }, [name, price, busy]);
+
+  // ✅ total pages
+  const totalPages = useMemo(() => {
+    return Math.max(1, Math.ceil(products.length / pageSize));
+  }, [products.length, pageSize]);
+
+  // ✅ potong data sesuai page
+  const pagedProducts = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return products.slice(start, start + pageSize);
+  }, [products, page, pageSize]);
+
+  // ✅ kalau delete/create bikin jumlah halaman turun → pastikan page valid
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   async function load(opts?: { silent?: boolean }) {
     if (!opts?.silent) setLoading(true);
@@ -171,7 +191,7 @@ export default function ProductsPage() {
         token: t,
         body: {
           name: name.trim(),
-          price: p, // ✅ kirim angka asli
+          price: p,
           description: description.trim() ? description.trim() : undefined,
         },
       });
@@ -182,6 +202,7 @@ export default function ProductsPage() {
 
       toast.success("Product berhasil dibuat", { id: toastId });
       await load({ silent: true });
+      setPage(1); // ✅ balik ke page 1 biar kelihatan yg baru (optional)
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Gagal membuat product", { id: toastId });
     } finally {
@@ -242,6 +263,20 @@ export default function ProductsPage() {
       setBusy(false);
     }
   }
+
+  // ✅ helper untuk render tombol nomor halaman (max 5)
+  const pageNumbers = useMemo(() => {
+    const maxButtons = 5;
+    let start = Math.max(1, page - Math.floor(maxButtons / 2));
+    let end = start + maxButtons - 1;
+
+    if (end > totalPages) {
+      end = totalPages;
+      start = Math.max(1, end - maxButtons + 1);
+    }
+
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+  }, [page, totalPages]);
 
   if (!mounted) {
     return (
@@ -320,26 +355,35 @@ export default function ProductsPage() {
       </div>
 
       <div className="mt-6 rounded-2xl border border-slate-200 overflow-hidden">
-        <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+        <div className="p-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
             <h2 className="font-semibold">Daftar Products</h2>
-            <p className="text-sm text-slate-600">{loading ? "\u00A0" : `${products.length} item`}</p>
+            <p className="text-sm text-slate-600">
+              {loading ? "\u00A0" : `${products.length} item • Page ${page} of ${totalPages}`}
+            </p>
           </div>
 
-          <button
-            onClick={() => load()}
-            disabled={loading}
-            className="rounded-xl border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50 disabled:opacity-60"
-          >
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setPage(1);
+              }}
+              className="rounded-xl border border-slate-300 px-2 py-2 text-sm"
+            >
+              <option value={10}>10 / page</option>
+              <option value={20}>20 / page</option>
+              <option value={50}>50 / page</option>
+            </select>
+          </div>
         </div>
 
         {loading ? (
-          <ProductSkeleton rows={5} />
+          <ProductSkeleton rows={pageSize} />
         ) : (
           <div className="divide-y divide-slate-200">
-            {products.map((p) => {
+            {pagedProducts.map((p) => {
               const isEditing = editingId === p.id;
 
               return (
@@ -428,6 +472,48 @@ export default function ProductsPage() {
             {products.length === 0 && (
               <div className="p-4 text-slate-600">
                 {token ? "Belum ada product." : "Login dulu untuk melihat product kamu."}
+              </div>
+            )}
+
+            {/* ✅ Pagination Controls */}
+            {products.length > 0 && (
+              <div className="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div className="text-sm text-slate-600">
+                  Showing {(page - 1) * pageSize + 1} -{" "}
+                  {Math.min(page * pageSize, products.length)} of {products.length}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="rounded-xl border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50 disabled:opacity-60"
+                  >
+                    Prev
+                  </button>
+
+                  {pageNumbers.map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => setPage(n)}
+                      className={`rounded-xl border px-3 py-2 text-sm ${
+                        n === page
+                          ? "border-slate-900 bg-slate-900 text-white"
+                          : "border-slate-300 hover:bg-slate-50"
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="rounded-xl border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50 disabled:opacity-60"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             )}
           </div>

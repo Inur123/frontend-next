@@ -20,7 +20,12 @@ export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // ✅ state show/hide password
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -28,6 +33,8 @@ export default function RegisterPage() {
     if (name.trim().length < 2) return toast.error("Nama minimal 2 karakter");
     if (!email.trim()) return toast.error("Email wajib diisi");
     if (password.trim().length < 6) return toast.error("Password minimal 6 karakter");
+    if (password !== confirmPassword)
+      return toast.error("Password dan konfirmasi password tidak sama");
 
     setLoading(true);
     const toastId = toast.loading("Membuat akun...");
@@ -86,16 +93,124 @@ export default function RegisterPage() {
             />
           </div>
 
+          {/* ✅ Password */}
           <div>
             <label className="text-sm text-slate-600">Password</label>
-            <input
-              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-900/20 disabled:opacity-60"
-              type="password"
-              placeholder="minimal 6 karakter"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-            />
+
+            <div className="relative mt-1">
+              <input
+                className="w-full rounded-xl border border-slate-300 px-3 py-2.5 pr-12 focus:outline-none focus:ring-2 focus:ring-slate-900/20 disabled:opacity-60"
+                type={showPassword ? "text" : "password"}
+                placeholder="minimal 6 karakter"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+              />
+
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900"
+                disabled={loading}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  // eye-off icon
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.77 21.77 0 0 1 5.06-6.94" />
+                    <path d="M1 1l22 22" />
+                    <path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.82 21.82 0 0 1-4.87 6.87" />
+                    <path d="M14.12 14.12a3 3 0 0 1-4.24-4.24" />
+                  </svg>
+                ) : (
+                  // eye icon
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* ✅ Confirm Password */}
+          <div>
+            <label className="text-sm text-slate-600">Confirm Password</label>
+
+            <div className="relative mt-1">
+              <input
+                className="w-full rounded-xl border border-slate-300 px-3 py-2.5 pr-12 focus:outline-none focus:ring-2 focus:ring-slate-900/20 disabled:opacity-60"
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="ulangi password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={loading}
+              />
+
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900"
+                disabled={loading}
+                aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+              >
+                {showConfirmPassword ? (
+                  // eye-off icon
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.77 21.77 0 0 1 5.06-6.94" />
+                    <path d="M1 1l22 22" />
+                    <path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.82 21.82 0 0 1-4.87 6.87" />
+                    <path d="M14.12 14.12a3 3 0 0 1-4.24-4.24" />
+                  </svg>
+                ) : (
+                  // eye icon
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
 
           <button
