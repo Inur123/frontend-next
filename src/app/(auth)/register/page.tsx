@@ -23,7 +23,7 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // ✅ state show/hide password
+  // ✅ show/hide password
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -96,7 +96,6 @@ export default function RegisterPage() {
           {/* ✅ Password */}
           <div>
             <label className="text-sm text-slate-600">Password</label>
-
             <div className="relative mt-1">
               <input
                 className="w-full rounded-xl border border-slate-300 px-3 py-2.5 pr-12 focus:outline-none focus:ring-2 focus:ring-slate-900/20 disabled:opacity-60"
@@ -115,7 +114,6 @@ export default function RegisterPage() {
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? (
-                  // eye-off icon
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="20"
@@ -133,7 +131,6 @@ export default function RegisterPage() {
                     <path d="M14.12 14.12a3 3 0 0 1-4.24-4.24" />
                   </svg>
                 ) : (
-                  // eye icon
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="20"
@@ -156,7 +153,6 @@ export default function RegisterPage() {
           {/* ✅ Confirm Password */}
           <div>
             <label className="text-sm text-slate-600">Confirm Password</label>
-
             <div className="relative mt-1">
               <input
                 className="w-full rounded-xl border border-slate-300 px-3 py-2.5 pr-12 focus:outline-none focus:ring-2 focus:ring-slate-900/20 disabled:opacity-60"
@@ -175,7 +171,6 @@ export default function RegisterPage() {
                 aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
               >
                 {showConfirmPassword ? (
-                  // eye-off icon
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="20"
@@ -193,7 +188,6 @@ export default function RegisterPage() {
                     <path d="M14.12 14.12a3 3 0 0 1-4.24-4.24" />
                   </svg>
                 ) : (
-                  // eye icon
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="20"
@@ -213,11 +207,34 @@ export default function RegisterPage() {
             </div>
           </div>
 
+          {/* ✅ BUTTON DENGAN SPINNER */}
           <button
             disabled={loading}
-            className="w-full rounded-xl bg-slate-900 text-white py-2.5 hover:bg-slate-800 disabled:opacity-60"
+            className="w-full rounded-xl bg-slate-900 text-white py-2.5 hover:bg-slate-800 disabled:opacity-60 flex items-center justify-center gap-2"
           >
-            {loading ? "Loading..." : "Register"}
+            {loading && (
+              <svg
+                className="h-5 w-5 animate-spin text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                />
+              </svg>
+            )}
+            <span>{loading ? "Register..." : "Register"}</span>
           </button>
         </form>
 
