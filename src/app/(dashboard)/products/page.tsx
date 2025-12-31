@@ -31,6 +31,19 @@ type UpdateProductResponse = {
   data: { product: Product };
 };
 
+// ✅ Format input jadi rupiah (20.000)
+function formatRupiahInput(value: string) {
+  const numeric = value.replace(/\D/g, "");
+  if (!numeric) return "";
+  return new Intl.NumberFormat("id-ID").format(Number(numeric));
+}
+
+// ✅ Parse input rupiah jadi number murni (20.000 -> 20000)
+function parseRupiahInput(value: string) {
+  const numeric = value.replace(/\D/g, "");
+  return numeric ? Number(numeric) : 0;
+}
+
 function ProductSkeleton({ rows = 5 }: { rows?: number }) {
   return (
     <div className="divide-y divide-slate-200">
@@ -77,18 +90,16 @@ export default function ProductsPage() {
   }, []);
 
   const canCreate = useMemo(() => {
-    const p = Number(price);
+    const p = parseRupiahInput(price);
     return name.trim().length >= 2 && Number.isFinite(p) && p >= 0 && !busy;
   }, [name, price, busy]);
 
   async function load(opts?: { silent?: boolean }) {
-    // silent refresh: jangan bikin skeleton kedip
     if (!opts?.silent) setLoading(true);
 
     try {
       const t = getToken();
       if (!t) {
-        // belum login → kosongkan list, jangan error spam
         setProducts([]);
         return;
       }
@@ -102,7 +113,6 @@ export default function ProductsPage() {
     }
   }
 
-  // initial load
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -116,7 +126,6 @@ export default function ProductsPage() {
     const t = getToken();
     if (!t) return;
 
-    // EventSource tidak bisa header → token via query
     const es = new EventSource(`${BASE}/products/stream?token=${encodeURIComponent(t)}`);
     const onChanged = () => load({ silent: true });
 
@@ -132,7 +141,7 @@ export default function ProductsPage() {
   function startEdit(p: Product) {
     setEditingId(p.id);
     setEditName(p.name);
-    setEditPrice(String(p.price));
+    setEditPrice(formatRupiahInput(String(p.price)));
     setEditDescription(p.description ?? "");
   }
 
@@ -149,7 +158,7 @@ export default function ProductsPage() {
     const t = getToken();
     if (!t) return toast.error("Harus login untuk membuat product");
 
-    const p = Number(price);
+    const p = parseRupiahInput(price);
     if (!name.trim() || !Number.isFinite(p) || p < 0) {
       return toast.error("Nama minimal 2 karakter, harga harus angka >= 0");
     }
@@ -162,7 +171,7 @@ export default function ProductsPage() {
         token: t,
         body: {
           name: name.trim(),
-          price: p, // ✅ kirim angka asli (bukan format 20.000)
+          price: p, // ✅ kirim angka asli
           description: description.trim() ? description.trim() : undefined,
         },
       });
@@ -184,7 +193,7 @@ export default function ProductsPage() {
     const t = getToken();
     if (!t) return toast.error("Harus login untuk update product");
 
-    const p = Number(editPrice);
+    const p = parseRupiahInput(editPrice);
     if (!editName.trim() || !Number.isFinite(p) || p < 0) {
       return toast.error("Nama minimal 2 karakter, harga harus angka >= 0");
     }
@@ -276,13 +285,10 @@ export default function ProductsPage() {
               disabled={busy}
               className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-900/20 disabled:opacity-60"
               value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              placeholder="20000"
+              onChange={(e) => setPrice(formatRupiahInput(e.target.value))}
+              placeholder="20.000"
               inputMode="numeric"
             />
-            <div className="text-xs text-slate-500 mt-1">
-              Preview: {price ? `Rp ${priceFormatter.format(Number(price) || 0)}` : "—"}
-            </div>
           </div>
 
           <div className="md:col-span-1">
@@ -354,7 +360,7 @@ export default function ProductsPage() {
                         <input
                           className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5"
                           value={editPrice}
-                          onChange={(e) => setEditPrice(e.target.value)}
+                          onChange={(e) => setEditPrice(formatRupiahInput(e.target.value))}
                           inputMode="numeric"
                         />
                       </div>
